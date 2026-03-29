@@ -4,10 +4,10 @@ variable "project_id" {
     default = "transfermarkt-pipeline"
 }
 
-variable "credentials" {
-  type = string
-  default = "../secrets/google_credentials.json"
-}
+# variable "credentials" {
+#   type = string
+#   default = "../secrets/google_credentials.json"
+# }
 
 variable "region" {
     description = "The Google cloud region"
