@@ -41,7 +41,7 @@ resource "google_storage_bucket" "football_bucket" {
 resource "google_bigquery_dataset" "dwh_dataset" {
   dataset_id  = "transfermarkt_dwh"
   project     = "transfermarkt-pipeline"
-  location    = "asia-southeast3" 
+  location    = var.location
   description = "Data warehouse for Transfermarkt football analytics"
   delete_contents_on_destroy = true 
 }

@@ -50,7 +50,7 @@ x-airflow-common:
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.1.8}
-  build: .
+  # build: .
   env_file:
     - ${ENV_FILE_PATH:-.env}
   environment:
@@ -73,7 +73,7 @@ x-airflow-common:
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- pyspark==3.5.1}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
@@ -334,6 +334,21 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+
+  streamlit:
+      # Use a standard Python image instead of the Airflow image
+      image: python:3.11-slim
+      volumes:
+        - ${AIRFLOW_PROJ_DIR:-.}/../app:/app
+        - ${AIRFLOW_PROJ_DIR:-.}/../secrets:/opt/airflow/secrets:ro
+      environment:
+        - GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/secrets/google_credentials.json
+      ports:
+        - "8501:8501"
+      # Install dependencies on the fly when the container starts
+      command: >
+        bash -c "pip install streamlit google-cloud-bigquery pandas db-dtypes plotly &&
+                streamlit run /app/dashboard.py --server.address=0.0.0.0 --server.port=8501"
 
 volumes:
   postgres-db-volume:
