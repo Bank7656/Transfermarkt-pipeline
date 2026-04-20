@@ -36,3 +36,12 @@ resource "google_storage_bucket" "football_bucket" {
     }
   }
 }
+
+# BigQuery Dataset for the Data Warehouse
+resource "google_bigquery_dataset" "dwh_dataset" {
+  dataset_id  = "transfermarkt_dwh"
+  project     = "transfermarkt-pipeline"
+  location    = "asia-southeast3" 
+  description = "Data warehouse for Transfermarkt football analytics"
+  delete_contents_on_destroy = true 
+}
