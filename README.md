@@ -88,7 +88,8 @@ Ensure you have the following installed on your local machine:
 ```bash
 git clone https://github.com/Bank7656/Transfermarkt-pipeline
 cd Transfermarkt-pipeline
-cp .env.example .env
+cp secrets/.env.example secrets/.env
+cp google_credentials_example.json google_credentials.json
 echo -e "AIRFLOW_UID=$(id -u)" >> .env 
 ```
 Open .env and fill the setup variable
@@ -103,7 +104,7 @@ Open .env and fill the setup variable
    * BigQuery Admin
    * Storage Admin
 3. Generate a JSON key for the Service Account.
-4. Save the key as `credentials.json` inside the `secrets/` directory.
+4. Save the key as `google_credentials.json` inside the `secrets/` directory.
 
 ### 3. Provision Infrastructure (Terraform)
 Navigate to the `terraform` directory and initialize the GCP resources (GCS bucket and BigQuery datasets):
@@ -113,7 +114,7 @@ Navigate to the `terraform` directory and initialize the GCP resources (GCS buck
 make infra-up
 
 # Stop and destroy GCP Resource
-make stop
+make infra-down
 ```
 
 *Note: You may need to update the `variables.tf` or `terraform.tfvars` file with your specific GCP Project ID.*
