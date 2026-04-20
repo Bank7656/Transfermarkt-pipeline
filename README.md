@@ -24,7 +24,7 @@ This project solves the data integration bottleneck by building a fully automate
 
 ## 🗄️ Data Warehouse Optimization (BigQuery)
 
-The core analytical data is stored in Google BigQuery (within the `transfermarkt_dwh` dataset). To ensure high performance, minimize latency for the upstream Streamlit dashboard, and reduce querying costs during dbt transformations, the tables are heavily optimized. 
+The core analytical data is stored weekly ingestion data in Google BigQuery (within the `transfermarkt_dwh` dataset). To ensure high performance, minimize latency for the upstream Streamlit dashboard, and reduce querying costs during dbt transformations, the tables are heavily optimized. 
 
 The optimization strategy categorizes tables into **Fact** (large, time-series) and **Dimension** (smaller, descriptive) models:
 
