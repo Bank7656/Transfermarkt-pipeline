@@ -1,3 +1,4 @@
+import os
 from airflow.sdk import dag, task
 from airflow.operators.bash import BashOperator
 from datetime import datetime
@@ -7,9 +8,9 @@ DATASET_NAME = "davidcariboo/player-scores"
 DATA_DIR = '/opt/airflow/data'
 # Google cloud storage
 GCP_KEY_PATH = "/opt/airflow/secrets/google_credentials.json"
-PROJECT_ID = "transfermarkt-pipeline"
-BUCKET_NAME = "football-data-storage-6532"
-BQ_DATASET_NAME = "transfermarkt_dwh"
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+GCP_BUCKET_NAME = os.environ.get("GCP_BUCKET_NAME")
+BQ_DATASET = os.environ.get("BQ_DATASET")
 
 # 👇 The complete rules for the Transfermarkt dataset
 TABLES_CONFIG = {
@@ -160,7 +161,11 @@ def data_ingestion(dataset :str, data_dir: str, project_id: str, bucket_name: st
         task_id='run_pyspark_transform',
         bash_command='python /opt/airflow/scripts/transform_player_stats.py',
         # Pass the Google credentials to the Bash environment so Spark can authenticate
-        env={"GOOGLE_APPLICATION_CREDENTIALS": "/opt/airflow/secrets/google_credentials.json"}
+        env={
+            "GOOGLE_APPLICATION_CREDENTIALS": "/opt/airflow/secrets/google_credentials.json",
+            'GCP_BUCKET_NAME': os.getenv('GCP_BUCKET_NAME'),
+            **os.environ,
+        }
     )
 
     # 👇 Loop through the dictionary and generate tasks!
@@ -171,8 +176,8 @@ def data_ingestion(dataset :str, data_dir: str, project_id: str, bucket_name: st
 data_ingestion(
     DATASET_NAME,
     DATA_DIR,
-    PROJECT_ID,
-    BUCKET_NAME,
+    GCP_PROJECT_ID,
+    GCP_BUCKET_NAME,
     GCP_KEY_PATH,
-    BQ_DATASET_NAME
+    BQ_DATASET
 )

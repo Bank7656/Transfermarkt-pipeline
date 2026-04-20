@@ -8,12 +8,12 @@ terraform {
 }
 
 provider "google" {
-  project = var.project_id
+  project = var.GCP_PROJECT_ID
   region  = var.region
 }
 
 resource "google_storage_bucket" "football_bucket" {
-  name          = var.bucket_name
+  name          = var.GCP_BUCKET_NAME
   location      = var.location
   force_destroy = true
   storage_class               = var.storage_class
@@ -39,8 +39,8 @@ resource "google_storage_bucket" "football_bucket" {
 
 # BigQuery Dataset for the Data Warehouse
 resource "google_bigquery_dataset" "dwh_dataset" {
-  dataset_id  = "transfermarkt_dwh"
-  project     = "transfermarkt-pipeline"
+  dataset_id  = var.BQ_DATASET
+  project     = var.GCP_PROJECT_ID
   location    = var.location
   description = "Data warehouse for Transfermarkt football analytics"
   delete_contents_on_destroy = true 

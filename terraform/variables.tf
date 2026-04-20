@@ -1,7 +1,19 @@
-variable "project_id" {
+variable "GCP_PROJECT_ID" {
     description = "Project ID"
     type=string
     default = "transfermarkt-pipeline"
+}
+
+variable "GCP_BUCKET_NAME" {
+    description = "The Google cloud storage bucket name"
+    type=string
+    default = "football-data-storage-6532"
+}
+
+variable "BQ_DATASET" {
+    description = "The Big Query dataset name"
+    type=string
+    default = "transfermarkt_dwh"
 }
 
 variable "region" {
@@ -16,11 +28,6 @@ variable "location" {
     default = "asia-southeast3"
 }
 
-variable "bucket_name" {
-    description = "The Google cloud storage bucket name"
-    type=string
-    default = "football-data-storage-6532"
-}
 
 variable "storage_class" {
   description = "Bucket Storage Class"
