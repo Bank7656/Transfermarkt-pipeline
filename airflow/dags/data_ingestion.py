@@ -1,4 +1,5 @@
 from airflow.sdk import dag, task
+from airflow.operators.bash import BashOperator
 from datetime import datetime
 
 # Ingestion
@@ -155,10 +156,17 @@ def data_ingestion(dataset :str, data_dir: str, project_id: str, bucket_name: st
 
     download_task >> upload_task
 
+    run_pyspark_transform = BashOperator(
+        task_id='run_pyspark_transform',
+        bash_command='python /opt/airflow/scripts/transform_player_stats.py',
+        # Pass the Google credentials to the Bash environment so Spark can authenticate
+        env={"GOOGLE_APPLICATION_CREDENTIALS": "/opt/airflow/secrets/google_credentials.json"}
+    )
+
     # 👇 Loop through the dictionary and generate tasks!
     for table_name, config in TABLES_CONFIG.items():
         bq_load_task = load_to_bigquery(project_id, bucket_name, gcp_key, bq_dataset, table_name, config)
-        upload_task >> bq_load_task # Make sure the upload finishes before loading this table
+        upload_task >> bq_load_task >> run_pyspark_transform
 
 data_ingestion(
     DATASET_NAME,

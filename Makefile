@@ -2,7 +2,7 @@ AIRFLOW_CONTAINER_PATH := airflow/docker-compose.yaml
 
 
 start:
-	@docker compose -f ${AIRFLOW_CONTAINER_PATH} up
+	@docker compose -f ${AIRFLOW_CONTAINER_PATH} up -d --build
 
 stop:
 	@docker compose -f ${AIRFLOW_CONTAINER_PATH} down
