@@ -94,12 +94,7 @@ Once healthy, access the Airflow UI at `http://localhost:8080`. Enable the DAGs 
 
 ### 5. Run the Analytics Dashboard
 Once the data is successfully loaded into the BigQuery `transfermarkt_dwh` dataset, you can spin up the Streamlit app.
-Navigate to the `app/` directory, install the requirements, and run the app:
 
-```bash
-cd app
-pip install -r requirements.txt
-streamlit run app.py
-```
+![Alt text](asset/dashboard_interface.jpeg)
 
 The dashboard will be available at `http://localhost:8501`. By default, it filters to the Premier League / other league to provide an immediate look at top-flight club and player performance.
