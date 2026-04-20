@@ -8,7 +8,50 @@ DATA_DIR = '/opt/airflow/data'
 GCP_KEY_PATH = "/opt/airflow/secrets/google_credentials.json"
 PROJECT_ID = "transfermarkt-pipeline"
 BUCKET_NAME = "football-data-storage-6532"
+BQ_DATASET_NAME = "transfermarkt_dwh"
 
+# 👇 The complete rules for the Transfermarkt dataset
+TABLES_CONFIG = {
+    # --- FACT TABLES (Time-based, Large) ---
+    "appearances": {
+        "partition_col": "date", 
+        "cluster_cols": ["player_id", "competition_id"]
+    },
+    "games": {
+        "partition_col": "date", 
+        "cluster_cols": ["competition_id"]
+    },
+    "player_valuations": {
+        "partition_col": "date", 
+        "cluster_cols": ["player_id"]
+    },
+    "game_events": {
+        "partition_col": "date", 
+        "cluster_cols": ["game_id", "player_id"]
+    },
+    "game_lineups": {
+        "partition_col": "date", 
+        "cluster_cols": ["game_id", "club_id"]
+    },
+
+    # --- DIMENSION TABLES (Descriptive, Smaller) ---
+    "players": {
+        "partition_col": None, 
+        "cluster_cols": ["current_club_id"]
+    },
+    "clubs": {
+        "partition_col": None, 
+        "cluster_cols": ["club_id"]
+    },
+    "competitions": {
+        "partition_col": None, 
+        "cluster_cols": ["competition_id"]
+    },
+    "club_games": {
+        "partition_col": None, 
+        "cluster_cols": ["club_id", "game_id"]
+    }
+}
 
 @dag(
     start_date=datetime(2024, 1, 1),
@@ -16,7 +59,7 @@ BUCKET_NAME = "football-data-storage-6532"
     catchup=False,
     tags=["Ingestion"]
 )
-def data_ingestion(dataset :str, data_dir: str, project_id: str, bucket_name: str, gcp_key: str):
+def data_ingestion(dataset :str, data_dir: str, project_id: str, bucket_name: str, gcp_key: str, bq_dataset: str):
 
     @task()
     def download_dataset(dataset: str, data_dir: str):
@@ -64,8 +107,58 @@ def data_ingestion(dataset :str, data_dir: str, project_id: str, bucket_name: st
             blob.upload_from_filename(file_path, timeout=600)
         print("All files successfully uploaded to Cloud Storage!")
         return f"Uploaded {len(csv_files)} files"
+
+    @task()
+    def load_to_bigquery(project_id: str, bucket_name: str, gcp_key: str, bq_dataset: str, table_name: str, config: dict):
+        from google.oauth2 import service_account
+        from google.cloud import bigquery
+        import os
+
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_key
+        credentials = service_account.Credentials.from_service_account_file(gcp_key)
+        client = bigquery.Client(project=project_id, credentials=credentials)
+
+        table_id = f"{project_id}.{bq_dataset}.{table_name}"
+        uri = f"gs://{bucket_name}/data/ingested/{table_name}.csv"
+
+        job_config = bigquery.LoadJobConfig(
+            autodetect=True, 
+            source_format=bigquery.SourceFormat.CSV,
+            skip_leading_rows=1, 
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE, 
+        )
+
+        # Apply Partitioning dynamically if it exists in the config
+        if config.get("partition_col"):
+            job_config.time_partitioning = bigquery.TimePartitioning(
+                type_=bigquery.TimePartitioningType.MONTH,
+                field=config["partition_col"] 
+            )
+            
+        # Apply Clustering dynamically if it exists in the config
+        if config.get("cluster_cols"):
+            job_config.clustering_fields = config["cluster_cols"]
+
+        # 👇 NEW CODE: Force delete the table if it already exists so we can recreate it cleanly
+        print(f"Checking if {table_id} exists to drop it...")
+        client.delete_table(table_id, not_found_ok=True) # not_found_ok=True prevents errors on the very first run
+
+        print(f"Loading {uri} into {table_id}...")
+        load_job = client.load_table_from_uri(uri, table_id, job_config=job_config)
+        load_job.result() 
         
-    download_dataset(dataset, data_dir) >> upload_to_gcs(project_id, bucket_name, gcp_key, data_dir)
+        return f"Loaded {table_name}"
+
+    # Execution order
+    download_task = download_dataset(dataset, data_dir)
+    upload_task = upload_to_gcs(project_id, bucket_name, gcp_key, data_dir)
+
+    download_task >> upload_task
+
+    # 👇 Loop through the dictionary and generate tasks!
+    for table_name, config in TABLES_CONFIG.items():
+        bq_load_task = load_to_bigquery(project_id, bucket_name, gcp_key, bq_dataset, table_name, config)
+        upload_task >> bq_load_task # Make sure the upload finishes before loading this table
 
 data_ingestion(
     DATASET_NAME,
@@ -73,4 +166,5 @@ data_ingestion(
     PROJECT_ID,
     BUCKET_NAME,
     GCP_KEY_PATH,
+    BQ_DATASET_NAME
 )
